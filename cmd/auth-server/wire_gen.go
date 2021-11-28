@@ -9,6 +9,7 @@ package main
 import (
 	"github.com/SergeyKozhin/blogin-auth/internal/data/postgres"
 	"github.com/SergeyKozhin/blogin-auth/internal/data/redis"
+	"github.com/SergeyKozhin/blogin-auth/internal/email"
 	"github.com/SergeyKozhin/blogin-auth/internal/jwt"
 )
 
@@ -39,12 +40,17 @@ func initApp() (*application, func(), error) {
 	userRepository := &postgres.UserRepository{
 		DB: pgxpoolPool,
 	}
+	codesRepository := redis.NewCodesRepository(pool, redisConfig)
+	emailConfig := newMailConfig(mainConfig)
+	mailSender := email.NewMailSender(emailConfig)
 	mainApplication := &application{
 		config:        mainConfig,
 		logger:        sugaredLogger,
 		jwts:          manager,
 		refreshTokens: refreshTokenRepository,
 		users:         userRepository,
+		codes:         codesRepository,
+		mail:          mailSender,
 	}
 	return mainApplication, func() {
 		cleanup4()

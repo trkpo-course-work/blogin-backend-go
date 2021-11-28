@@ -5,12 +5,12 @@ import (
 	"net/http"
 )
 
-func (app *application) logError(r *http.Request, err error) {
+func (app *application) logError(_ *http.Request, err error) {
 	app.logger.Errorw("server error", "error", err)
 }
 
-func (app *application) errorResponse(w http.ResponseWriter, r *http.Request, status int, mesaage interface{}) {
-	data := map[string]interface{}{"error": mesaage}
+func (app *application) errorResponse(w http.ResponseWriter, r *http.Request, status int, message interface{}) {
+	data := map[string]interface{}{"error": message}
 
 	if err := app.writeJSON(w, status, data, nil); err != nil {
 		app.logError(r, err)
@@ -52,30 +52,6 @@ func (app *application) unauthorizedResponse(w http.ResponseWriter, r *http.Requ
 	app.clientErrorResponse(w, r, http.StatusUnauthorized, err.Error())
 }
 
-func (app *application) userAllreadyExistsResponse(w http.ResponseWriter, r *http.Request) {
-	app.clientErrorResponse(w, r, http.StatusConflict, "user with provided email already exists")
-}
-
-func (app *application) subscriptionAlreadyActiveResponse(w http.ResponseWriter, r *http.Request) {
-	app.clientErrorResponse(w, r, http.StatusConflict, "subscription already active")
-}
-
-func (app *application) subscriptionAlreadyActiveOnAnotherAccount(w http.ResponseWriter, r *http.Request) {
-	app.clientErrorResponse(w, r, http.StatusConflict, "subscription already active on another account")
-}
-
-func (app *application) fileTooBigResponse(w http.ResponseWriter, r *http.Request) {
-	app.clientErrorResponse(w, r, http.StatusConflict, "file is too big")
-}
-
-func (app *application) noPasswordSetResponse(w http.ResponseWriter, r *http.Request) {
-	app.clientErrorResponse(w, r, http.StatusConflict, "no password set")
-}
-
-func (app *application) forbiddenResponse(w http.ResponseWriter, r *http.Request, messsage string) {
-	app.clientErrorResponse(w, r, http.StatusForbidden, messsage)
-}
-
-func (app *application) subscriptionInactive(w http.ResponseWriter, r *http.Request) {
-	app.clientErrorResponse(w, r, http.StatusPaymentRequired, "subscription inactive")
+func (app *application) forbiddenResponse(w http.ResponseWriter, r *http.Request, message string) {
+	app.clientErrorResponse(w, r, http.StatusForbidden, message)
 }

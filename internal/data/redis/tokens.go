@@ -56,7 +56,7 @@ func (sr *RefreshTokenRepository) Add(ctx context.Context, session string, id in
 		return err
 	}
 	if exists {
-		return models.ErrAllreadyExists
+		return models.ErrAlreadyExists
 	}
 
 	err = conn.Send("MULTI")
@@ -118,7 +118,7 @@ func (sr *RefreshTokenRepository) Refresh(ctx context.Context, old, new string) 
 		return err
 	}
 	if exists {
-		return models.ErrAllreadyExists
+		return models.ErrAlreadyExists
 	}
 
 	err = conn.Send("MULTI")

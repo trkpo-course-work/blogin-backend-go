@@ -6,6 +6,7 @@ import (
 
 	"github.com/SergeyKozhin/blogin-auth/internal/data/postgres"
 	"github.com/SergeyKozhin/blogin-auth/internal/data/redis"
+	"github.com/SergeyKozhin/blogin-auth/internal/email"
 	"github.com/SergeyKozhin/blogin-auth/internal/jwt"
 	"github.com/xlab/closer"
 	"go.uber.org/zap"
@@ -18,6 +19,8 @@ type application struct {
 	jwts          *jwt.Manager
 	refreshTokens *redis.RefreshTokenRepository
 	users         *postgres.UserRepository
+	codes         *redis.CodesRepository
+	mail          *email.MailSender
 }
 
 func main() {
@@ -88,6 +91,15 @@ func newRedisConfig(c *config) *redis.Config {
 		SessionTTl:           c.SessionTTl,
 		SessionCleanupPeriod: c.SessionCleanupPeriod,
 		SessionWindowPeriod:  c.SessionWindowPeriod,
-		//CodeTTL:              c.CodeTTL,
+		CodeTTL:              c.CodeTTL,
+	}
+}
+
+func newMailConfig(c *config) *email.Config {
+	return &email.Config{
+		Server: c.EmailServer,
+		Port:   c.EmailPort,
+		Login:  c.EmailLogin,
+		Pass:   c.EmailPass,
 	}
 }

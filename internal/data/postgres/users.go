@@ -38,7 +38,7 @@ func (ur *UserRepository) Add(ctx context.Context, user *models.User) error {
 	if _, err := tx.Exec(ctx, stmt, user.ID, user.Login, user.Email, user.PasswordHash, user.Confirmed); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr); pgErr.Code == pgerrcode.UniqueViolation {
-			return models.ErrAllreadyExists
+			return models.ErrAlreadyExists
 		}
 		return err
 	}
@@ -65,7 +65,7 @@ func (ur *UserRepository) GetByID(ctx context.Context, id int64) (*models.User, 
 	return user, nil
 }
 
-func (ur *UserRepository) GetByLogin(ctx context.Context, email string) (*models.User, error) {
+func (ur *UserRepository) GetByLogin(ctx context.Context, login string) (*models.User, error) {
 	conn, err := ur.DB.Acquire(ctx)
 	if err != nil {
 		return nil, err
@@ -74,6 +74,25 @@ func (ur *UserRepository) GetByLogin(ctx context.Context, email string) (*models
 
 	user := &models.User{}
 	stmt := "SELECT u.id, name, login, email, password_hash, confirmed FROM users u JOIN credentials c on u.id = c.user_id WHERE c.login = $1"
+	if err := pgxscan.Get(ctx, conn, user, stmt, login); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, models.ErrNoRecord
+		}
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (ur *UserRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
+	conn, err := ur.DB.Acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	user := &models.User{}
+	stmt := "SELECT u.id, name, login, email, password_hash, confirmed FROM users u JOIN credentials c on u.id = c.user_id WHERE c.email = $1"
 	if err := pgxscan.Get(ctx, conn, user, stmt, email); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, models.ErrNoRecord
@@ -107,12 +126,12 @@ func (ur *UserRepository) Update(ctx context.Context, user *models.User) error {
 		return models.ErrNoRecord
 	}
 
-	stmt = "UPDATE credentials SET login = $2, email = $3, password_hash = $4 WHERE user_id = $1"
-	tag, err = tx.Exec(ctx, stmt, user.ID, user.Login, user.Email, user.PasswordHash)
+	stmt = "UPDATE credentials SET login = $2, email = $3, password_hash = $4, confirmed = $5 WHERE user_id = $1"
+	tag, err = tx.Exec(ctx, stmt, user.ID, user.Login, user.Email, user.PasswordHash, user.Confirmed)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr); pgErr.Code == pgerrcode.UniqueViolation {
-			return models.ErrAllreadyExists
+			return models.ErrAlreadyExists
 		}
 		return err
 	}

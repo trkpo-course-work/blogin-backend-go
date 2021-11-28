@@ -119,7 +119,7 @@ func (app *application) generateTokens(ctx context.Context, id int64) (*tokens, 
 		}
 
 		if err := app.refreshTokens.Add(ctx, refreshToken, id); err != nil {
-			if errors.Is(err, models.ErrAllreadyExists) {
+			if errors.Is(err, models.ErrAlreadyExists) {
 				continue
 			}
 			return nil, err
