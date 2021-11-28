@@ -4,17 +4,20 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/SergeyKozhin/blogin-auth/internal/data/postgres"
+	"github.com/SergeyKozhin/blogin-auth/internal/data/redis"
+	"github.com/SergeyKozhin/blogin-auth/internal/jwt"
 	"github.com/xlab/closer"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 type application struct {
-	config *config
-	logger *zap.SugaredLogger
-	//jwts          *jwt.Manager
-	//refreshTokens *redis.RefreshTokenRepository
-	//users         *postgres.UserRepository
+	config        *config
+	logger        *zap.SugaredLogger
+	jwts          *jwt.Manager
+	refreshTokens *redis.RefreshTokenRepository
+	users         *postgres.UserRepository
 }
 
 func main() {
@@ -65,27 +68,26 @@ func newLogger(c *config) (*zap.SugaredLogger, func(), error) {
 	return logger.Sugar(), cleanup, nil
 }
 
-//func newPostgresConfig(c *config, logger *zap.SugaredLogger) *postgres.Config {
-//	return &postgres.Config{
-//		PostgresUrl:          c.PostgresUrl,
-//		ClassesClenaupPeriod: c.ClassesClaenupPeriod,
-//		Logger:               logger,
-//	}
-//}
-//
-//func newJwtConfig(c *config) *jwt.Config {
-//	return &jwt.Config{
-//		Secret:     c.Secret,
-//		Expiration: c.JwtTTL,
-//	}
-//}
-//
-//func newRedisConfig(c *config) *redis.Config {
-//	return &redis.Config{
-//		RedisUrl:             c.RedisUrl,
-//		SessionTTl:           c.SessionTTl,
-//		SessionCleanupPeriod: c.SessionCleanupPeriod,
-//		SessionWindowPeriod:  c.SessionWindowPeriod,
-//		CodeTTL:              c.CodeTTL,
-//	}
-//}
+func newPostgresConfig(c *config, logger *zap.SugaredLogger) *postgres.Config {
+	return &postgres.Config{
+		PostgresUrl: c.PostgresUrl,
+		Logger:      logger,
+	}
+}
+
+func newJwtConfig(c *config) *jwt.Config {
+	return &jwt.Config{
+		Secret:     c.Secret,
+		Expiration: c.JwtTTL,
+	}
+}
+
+func newRedisConfig(c *config) *redis.Config {
+	return &redis.Config{
+		RedisUrl:             c.RedisUrl,
+		SessionTTl:           c.SessionTTl,
+		SessionCleanupPeriod: c.SessionCleanupPeriod,
+		SessionWindowPeriod:  c.SessionWindowPeriod,
+		//CodeTTL:              c.CodeTTL,
+	}
+}

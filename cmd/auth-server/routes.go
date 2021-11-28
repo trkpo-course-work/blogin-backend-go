@@ -25,19 +25,19 @@ func (app *application) route() http.Handler {
 	r.NotFound(app.notFoundResponse)
 	r.MethodNotAllowed(app.methodNotAllowedResponse)
 
-	//r.Route("/auth", func(r chi.Router) {
-	//	r.Post("/signup", app.signupUserHandler)
-	//	r.Post("/login", app.loginUserHandler)
-	//	r.Post("/refresh", app.refreshTokenHandler)
-	//	r.Post("/logout", app.logoutUserHandler)
-	//
-	//	//r.Post("/request_confirmation", app.requestConfirmationHandler)
-	//	//r.Post("/confirm", app.confirmHandler)
-	//	//
-	//	//r.Post("/request_reset", app.requestResetHandler)
-	//	//r.Post("/check_reset_code", app.checkResetHandler)
-	//	//r.Post("/reset", app.resetHandler)
-	//})
+	r.Route("/api/v1/auth", func(r chi.Router) {
+		//	r.Post("/signup", app.signupUserHandler)
+		r.Post("/login", app.loginUserHandler)
+		r.Post("/refresh", app.refreshTokenHandler)
+		r.Post("/logout", app.logoutUserHandler)
+		//
+		//	//r.Post("/request_confirmation", app.requestConfirmationHandler)
+		//	//r.Post("/confirm", app.confirmHandler)
+		//	//
+		//	//r.Post("/request_reset", app.requestResetHandler)
+		//	//r.Post("/check_reset_code", app.checkResetHandler)
+		//	//r.Post("/reset", app.resetHandler)
+	})
 
 	return r
 }

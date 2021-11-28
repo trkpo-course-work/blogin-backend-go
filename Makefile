@@ -1,7 +1,7 @@
 wire:
-	wire ./cmd/api
+	wire ./cmd/auth-server
 
-DB_DSN=postgres://postgres:bloginpasss@localhost/postgres?sslmode=disable
+DB_DSN=postgres://postgres:bloginpass@localhost/postgres?sslmode=disable
 
 migrate_up:
 	migrate -path=./migrations -database=${DB_DSN} up ${VERSION}

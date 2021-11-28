@@ -9,7 +9,7 @@ import (
 type config struct {
 	Production           bool          `env:"PRODUCTION" envDefault:"false"`
 	Port                 string        `env:"PORT" envDefault:"80"`
-	PostgresUrl          string        `env:"POSTGRES_URL" envDefault:"postgres://postgres:tutorpass@db:5432/postgres?sslmode=disable"`
+	PostgresUrl          string        `env:"POSTGRES_URL,required"`
 	RedisUrl             string        `env:"REDIS_URL" envDefault:"redis:6379"`
 	JwtTTL               time.Duration `env:"TOKEN_TTL" envDefault:"20m"`
 	Secret               string        `env:"SECRET,required"`

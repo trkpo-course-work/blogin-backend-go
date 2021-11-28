@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"errors"
@@ -9,6 +10,8 @@ import (
 	"math/big"
 	"net/http"
 	"strings"
+
+	"github.com/SergeyKozhin/blogin-auth/internal/data/models"
 )
 
 func (app *application) writeJSON(w http.ResponseWriter, status int, data interface{}, headers http.Header) error {
@@ -97,36 +100,36 @@ func (app *application) generateRandomString(n int) (string, error) {
 	return string(b), nil
 }
 
-//type tokens struct {
-//	AccessToken  string `json:"access_token"`
-//	RefreshToken string `json:"refresh_token"`
-//}
-//
-//func (app *application) generateTokens(ctx context.Context, id int64) (*tokens, error) {
-//	accessToken, err := app.jwts.CreateToken(id)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	refreshToken := ""
-//	for {
-//		refreshToken, err = app.generateRandomString(app.config.SessionTokenLength)
-//		if err != nil {
-//			return nil, err
-//		}
-//
-//		if err := app.refreshTokens.Add(ctx, refreshToken, id); err != nil {
-//			if errors.Is(err, models.ErrAllreadyExists) {
-//				continue
-//			}
-//			return nil, err
-//		}
-//
-//		break
-//	}
-//
-//	return &tokens{
-//		AccessToken:  accessToken,
-//		RefreshToken: refreshToken,
-//	}, nil
-//}
+type tokens struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+}
+
+func (app *application) generateTokens(ctx context.Context, id int64) (*tokens, error) {
+	accessToken, err := app.jwts.CreateToken(id)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshToken := ""
+	for {
+		refreshToken, err = app.generateRandomString(app.config.SessionTokenLength)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := app.refreshTokens.Add(ctx, refreshToken, id); err != nil {
+			if errors.Is(err, models.ErrAllreadyExists) {
+				continue
+			}
+			return nil, err
+		}
+
+		break
+	}
+
+	return &tokens{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
+}
