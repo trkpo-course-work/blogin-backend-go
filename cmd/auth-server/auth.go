@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/SergeyKozhin/blogin-auth/internal/data/models"
 	"github.com/SergeyKozhin/blogin-auth/internal/validator"
@@ -10,6 +11,58 @@ import (
 )
 
 var ErrorInvalidCredentials = errors.New("invalid credentials")
+
+func (app *application) signupUserHandler(w http.ResponseWriter, r *http.Request) {
+	input := &struct {
+		FullName string `json:"full_name"`
+		Login    string `json:"login"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}{}
+
+	if err := app.readJSON(w, r, input); err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	v := validator.New()
+
+	v.Check(len(input.FullName) != 0, "full_name", "full name name must be provided")
+	v.Check(len(input.Login) != 0, "login", "login name must be provided")
+	v.Check(validator.Matches(input.Email, validator.EmailRX), "email", "valid email must be provided")
+	v.Check(len(input.Password) != 0, "password", "password must be provided")
+
+	if !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	user := &models.User{
+		FullName:     input.FullName,
+		Login:        input.Login,
+		Email:        strings.ToLower(input.Email),
+		PasswordHash: string(hash),
+	}
+
+	if err := app.users.Add(r.Context(), user); err != nil {
+		var alreadyExistErr *models.ErrUserAlreadyExists
+		switch {
+		case errors.As(err, &alreadyExistErr):
+			app.userAlreadyExistsResponse(w, r, alreadyExistErr.Column)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
 
 func (app *application) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 	input := &struct {

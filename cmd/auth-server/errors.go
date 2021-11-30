@@ -55,3 +55,7 @@ func (app *application) unauthorizedResponse(w http.ResponseWriter, r *http.Requ
 func (app *application) forbiddenResponse(w http.ResponseWriter, r *http.Request, message string) {
 	app.clientErrorResponse(w, r, http.StatusForbidden, message)
 }
+
+func (app *application) userAlreadyExistsResponse(w http.ResponseWriter, r *http.Request, field string) {
+	app.clientErrorResponse(w, r, http.StatusConflict, field+" is already in use")
+}

@@ -14,3 +14,9 @@ migrate_force:
 
 migrate_create:
 	migrate create -seq -ext=.sql -dir=./migrations ${NAME}
+
+docker_tag:
+	docker tag blogin-auth_app ghcr.io/sergeykozhin/blogin-auth:latest
+
+docker_push:
+	docker push ghcr.io/sergeykozhin/blogin-auth:latest

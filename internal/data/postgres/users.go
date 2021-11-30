@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/SergeyKozhin/blogin-auth/internal/data/models"
 	"github.com/georgysavva/scany/pgxscan"
@@ -38,7 +39,14 @@ func (ur *UserRepository) Add(ctx context.Context, user *models.User) error {
 	if _, err := tx.Exec(ctx, stmt, user.ID, user.Login, user.Email, user.PasswordHash, user.Confirmed); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr); pgErr.Code == pgerrcode.UniqueViolation {
-			return models.ErrAlreadyExists
+			switch {
+			case strings.Contains(pgErr.ConstraintName, "login"):
+				return &models.ErrUserAlreadyExists{Column: "login"}
+			case strings.Contains(pgErr.ConstraintName, "email"):
+				return &models.ErrUserAlreadyExists{Column: "email"}
+			default:
+				return err
+			}
 		}
 		return err
 	}

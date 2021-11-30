@@ -26,7 +26,7 @@ func (app *application) route() http.Handler {
 	r.MethodNotAllowed(app.methodNotAllowedResponse)
 
 	r.Route("/api/v1/auth", func(r chi.Router) {
-		//	r.Post("/signup", app.signupUserHandler)
+		r.Post("/signup", app.signupUserHandler)
 		r.Post("/login", app.loginUserHandler)
 		r.Post("/refresh", app.refreshTokenHandler)
 		r.Post("/logout", app.logoutUserHandler)
