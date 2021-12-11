@@ -2,6 +2,7 @@ FROM golang:alpine AS builder
 
 ARG CGO_ENABLED=0 
 ARG GOOS=linux
+ARG CMD_PATH
 RUN go install github.com/google/wire/cmd/wire@latest
 
 WORKDIR /build
@@ -12,8 +13,8 @@ RUN go mod download
 COPY cmd cmd
 COPY internal internal
 
-RUN wire ./cmd/auth-server
-RUN go build -o app ./cmd/auth-server
+RUN wire $CMD_PATH
+RUN go build -o app $CMD_PATH
 
 FROM alpine
 LABEL maintainer="Sergey Kozhin <kozhinsergeyv@gmail.com>"

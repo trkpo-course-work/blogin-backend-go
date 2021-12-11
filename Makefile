@@ -1,5 +1,6 @@
 wire:
 	wire ./cmd/auth-server
+	wire ./cmd/file-server
 
 DB_DSN=postgres://postgres:bloginpass@localhost/postgres?sslmode=disable
 
@@ -16,7 +17,9 @@ migrate_create:
 	migrate create -seq -ext=.sql -dir=./migrations ${NAME}
 
 docker_tag:
-	docker tag blogin-auth_app ghcr.io/sergeykozhin/blogin-auth:latest
+	docker tag blogin-auth_auth-app ghcr.io/sergeykozhin/blogin-auth:latest
+	docker tag blogin-auth_files-app ghcr.io/sergeykozhin/blogin-files:latest
 
 docker_push:
 	docker push ghcr.io/sergeykozhin/blogin-auth:latest
+	docker push ghcr.io/sergeykozhin/blogin-files:latest
