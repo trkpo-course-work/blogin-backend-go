@@ -1,1 +1,1 @@
-# BlogIn Auth Server
+# BlogIn Backend Go
