@@ -25,7 +25,7 @@ func (app *application) route() http.Handler {
 	r.NotFound(app.notFoundResponse)
 	r.MethodNotAllowed(app.methodNotAllowedResponse)
 
-	r.With(app.auth).Route("/api/v1/pictures", func(r chi.Router) {
+	r.Route("/api/v1/pictures", func(r chi.Router) {
 		r.Post("/", app.uploadPicture)
 		r.With(app.pictureCtx).Route("/{pictureID}", func(r chi.Router) {
 			r.Get("/", app.downloadPicture)
