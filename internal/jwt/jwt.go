@@ -27,19 +27,24 @@ type Config struct {
 	Expiration time.Duration
 }
 
-type Manager struct {
+type Manager interface {
+	CreateToken(id int64) (string, error)
+	GetIdFromToken(token string) (int64, error)
+}
+
+type ManagerImplementation struct {
 	Secret     string
 	Expiration time.Duration
 }
 
-func NewManger(c *Config) *Manager {
-	return &Manager{
+func NewManger(c *Config) *ManagerImplementation {
+	return &ManagerImplementation{
 		Secret:     c.Secret,
 		Expiration: c.Expiration,
 	}
 }
 
-func (m *Manager) CreateToken(id int64) (string, error) {
+func (m *ManagerImplementation) CreateToken(id int64) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
 		IssuedAt:  &jwt.NumericDate{Time: time.Now()},
 		ExpiresAt: &jwt.NumericDate{Time: time.Now().Add(m.Expiration)},
@@ -49,7 +54,7 @@ func (m *Manager) CreateToken(id int64) (string, error) {
 	return token.SignedString([]byte(m.Secret))
 }
 
-func (m *Manager) GetIdFromToken(token string) (int64, error) {
+func (m *ManagerImplementation) GetIdFromToken(token string) (int64, error) {
 	parsed, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(m.Secret), nil
 	})

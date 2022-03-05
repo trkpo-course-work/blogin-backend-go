@@ -15,15 +15,20 @@ type Config struct {
 	Pass   string
 }
 
-type MailSender struct {
+type MailSender interface {
+	SendResetCode(to string, code string) error
+	SendConfirmationCode(to string, code string) error
+}
+
+type MailSenderClient struct {
 	Server string
 	Port   string
 	Login  string
 	Pass   string
 }
 
-func NewMailSender(c *Config) *MailSender {
-	return &MailSender{
+func NewMailSender(c *Config) *MailSenderClient {
+	return &MailSenderClient{
 		Server: c.Server,
 		Login:  c.Login,
 		Pass:   c.Pass,
@@ -31,7 +36,7 @@ func NewMailSender(c *Config) *MailSender {
 	}
 }
 
-func (ms *MailSender) SendResetCode(to string, code string) error {
+func (ms *MailSenderClient) SendResetCode(to string, code string) error {
 	auth := smtp.PlainAuth("", ms.Login, ms.Pass, ms.Server)
 
 	e := email2.NewEmail()
@@ -45,7 +50,7 @@ func (ms *MailSender) SendResetCode(to string, code string) error {
 	return e.SendWithStartTLS(ms.Server+":"+ms.Port, auth, &tls.Config{InsecureSkipVerify: true})
 }
 
-func (ms *MailSender) SendConfirmationCode(to string, code string) error {
+func (ms *MailSenderClient) SendConfirmationCode(to string, code string) error {
 	auth := smtp.PlainAuth("", ms.Login, ms.Pass, ms.Server)
 
 	e := email2.NewEmail()

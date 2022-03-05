@@ -25,7 +25,7 @@ func initApp() (*application, func(), error) {
 		return nil, nil, err
 	}
 	jwtConfig := newJwtConfig(mainConfig)
-	manager := jwt.NewManger(jwtConfig)
+	managerImplementation := jwt.NewManger(jwtConfig)
 	redisConfig := newRedisConfig(mainConfig)
 	pool, cleanup2 := redis.NewRedisPool(redisConfig, sugaredLogger)
 	refreshTokenRepository, cleanup3 := redis.NewRefreshTokenRepository(pool, redisConfig, sugaredLogger)
@@ -42,15 +42,15 @@ func initApp() (*application, func(), error) {
 	}
 	codesRepository := redis.NewCodesRepository(pool, redisConfig)
 	emailConfig := newMailConfig(mainConfig)
-	mailSender := email.NewMailSender(emailConfig)
+	mailSenderClient := email.NewMailSender(emailConfig)
 	mainApplication := &application{
 		config:        mainConfig,
 		logger:        sugaredLogger,
-		jwts:          manager,
+		jwts:          managerImplementation,
 		refreshTokens: refreshTokenRepository,
 		users:         userRepository,
 		codes:         codesRepository,
-		mail:          mailSender,
+		mail:          mailSenderClient,
 	}
 	return mainApplication, func() {
 		cleanup4()

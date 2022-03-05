@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/SergeyKozhin/blogin-auth/internal/data"
+
 	"github.com/SergeyKozhin/blogin-auth/internal/data/postgres"
 	"github.com/SergeyKozhin/blogin-auth/internal/data/redis"
 	"github.com/SergeyKozhin/blogin-auth/internal/email"
@@ -16,11 +18,11 @@ import (
 type application struct {
 	config        *config
 	logger        *zap.SugaredLogger
-	jwts          *jwt.Manager
-	refreshTokens *redis.RefreshTokenRepository
-	users         *postgres.UserRepository
-	codes         *redis.CodesRepository
-	mail          *email.MailSender
+	jwts          jwt.Manager
+	refreshTokens data.RefreshTokenRepository
+	users         data.UserRepository
+	codes         data.CodesRepository
+	mail          email.MailSender
 }
 
 func main() {
