@@ -15,7 +15,7 @@ import (
 type application struct {
 	config   *config
 	logger   *zap.SugaredLogger
-	jwts     *jwt.Manager
+	jwts     *jwt.ManagerImplementation
 	pictures *postgres.PicturesRepository
 }
 

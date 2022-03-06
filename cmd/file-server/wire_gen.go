@@ -23,7 +23,7 @@ func initApp() (*application, func(), error) {
 		return nil, nil, err
 	}
 	jwtConfig := newJwtConfig(mainConfig)
-	manager := jwt.NewManger(jwtConfig)
+	managerImplementation := jwt.NewManger(jwtConfig)
 	postgresConfig := newPostgresConfig(mainConfig, sugaredLogger)
 	pool, cleanup2, err := postgres.NewPsqlPool(postgresConfig)
 	if err != nil {
@@ -36,7 +36,7 @@ func initApp() (*application, func(), error) {
 	mainApplication := &application{
 		config:   mainConfig,
 		logger:   sugaredLogger,
-		jwts:     manager,
+		jwts:     managerImplementation,
 		pictures: picturesRepository,
 	}
 	return mainApplication, func() {

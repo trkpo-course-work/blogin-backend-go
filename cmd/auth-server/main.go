@@ -1,8 +1,12 @@
 package main
 
 import (
+	"crypto/rand"
+	"io"
 	"log"
 	"net/http"
+
+	"github.com/SergeyKozhin/blogin-auth/internal/data"
 
 	"github.com/SergeyKozhin/blogin-auth/internal/data/postgres"
 	"github.com/SergeyKozhin/blogin-auth/internal/data/redis"
@@ -16,11 +20,12 @@ import (
 type application struct {
 	config        *config
 	logger        *zap.SugaredLogger
-	jwts          *jwt.Manager
-	refreshTokens *redis.RefreshTokenRepository
-	users         *postgres.UserRepository
-	codes         *redis.CodesRepository
-	mail          *email.MailSender
+	jwts          jwt.Manager
+	refreshTokens data.RefreshTokenRepository
+	users         data.UserRepository
+	codes         data.CodesRepository
+	mail          email.MailSender
+	randSource    io.Reader
 }
 
 func main() {
@@ -102,4 +107,8 @@ func newMailConfig(c *config) *email.Config {
 		Login:  c.EmailLogin,
 		Pass:   c.EmailPass,
 	}
+}
+
+func newRandSource(_ *config) io.Reader {
+	return rand.Reader
 }
