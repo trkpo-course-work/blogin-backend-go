@@ -1197,7 +1197,74 @@ func Test_application_signupUserHandler(t *testing.T) {
 			emptyBody: true,
 		},
 		{
-			name: "errors in input",
+			name: "invalid full name",
+			input: input{
+				FullName: "",
+				Login:    validLogin,
+				Email:    validEmail,
+				Password: validPass,
+			},
+			prepareMocks: func() {},
+			wantCode:     http.StatusUnprocessableEntity,
+			wantBody: map[string]interface{}{
+				"error": map[string]string{
+					"full_name": "full name name must be provided",
+				},
+			},
+		},
+		{
+			name: "invalid login and password",
+			input: input{
+				FullName: confirmedUser.FullName,
+				Login:    "",
+				Email:    validEmail,
+				Password: "",
+			},
+			prepareMocks: func() {},
+			wantCode:     http.StatusUnprocessableEntity,
+			wantBody: map[string]interface{}{
+				"error": map[string]string{
+					"login":    "login name must be provided",
+					"password": "password must be provided",
+				},
+			},
+		},
+		{
+			name: "invalid email and password",
+			input: input{
+				FullName: confirmedUser.FullName,
+				Login:    validLogin,
+				Email:    "notEmail",
+				Password: "",
+			},
+			prepareMocks: func() {},
+			wantCode:     http.StatusUnprocessableEntity,
+			wantBody: map[string]interface{}{
+				"error": map[string]string{
+					"email":    "valid email must be provided",
+					"password": "password must be provided",
+				},
+			},
+		},
+		{
+			name: "invalid login and email",
+			input: input{
+				FullName: confirmedUser.FullName,
+				Login:    "",
+				Email:    "notEmail",
+				Password: validPass,
+			},
+			prepareMocks: func() {},
+			wantCode:     http.StatusUnprocessableEntity,
+			wantBody: map[string]interface{}{
+				"error": map[string]string{
+					"login": "login name must be provided",
+					"email": "valid email must be provided",
+				},
+			},
+		},
+		{
+			name: "all invalid",
 			input: input{
 				FullName: "",
 				Login:    "",
