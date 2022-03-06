@@ -32,6 +32,7 @@ func initApp() (*application, func(), error) {
 		newMailConfig,
 		email.NewMailSender,
 		wire.Bind(new(email.MailSender), new(*email.MailSenderClient)),
+		newRandSource,
 		wire.Struct(new(application), "*"),
 	)
 

@@ -19,7 +19,7 @@ func (app *application) writeJSON(w http.ResponseWriter, status int, data interf
 	if err != nil {
 		return err
 	}
-	js = append(js, '\n')
+	//js = append(js, '\n')
 
 	for key, value := range headers {
 		w.Header()[key] = value
@@ -90,7 +90,7 @@ func (app *application) generateRandomString(n int) (string, error) {
 	b := make([]byte, n)
 
 	for i := range b {
-		num, err := rand.Int(rand.Reader, limit)
+		num, err := rand.Int(app.randSource, limit)
 		if err != nil {
 			return "", err
 		}

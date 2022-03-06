@@ -43,6 +43,7 @@ func initApp() (*application, func(), error) {
 	codesRepository := redis.NewCodesRepository(pool, redisConfig)
 	emailConfig := newMailConfig(mainConfig)
 	mailSenderClient := email.NewMailSender(emailConfig)
+	reader := newRandSource(mainConfig)
 	mainApplication := &application{
 		config:        mainConfig,
 		logger:        sugaredLogger,
@@ -51,6 +52,7 @@ func initApp() (*application, func(), error) {
 		users:         userRepository,
 		codes:         codesRepository,
 		mail:          mailSenderClient,
+		randSource:    reader,
 	}
 	return mainApplication, func() {
 		cleanup4()

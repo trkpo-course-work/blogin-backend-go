@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"io"
 	"log"
 	"net/http"
 
@@ -23,6 +25,7 @@ type application struct {
 	users         data.UserRepository
 	codes         data.CodesRepository
 	mail          email.MailSender
+	randSource    io.Reader
 }
 
 func main() {
@@ -104,4 +107,8 @@ func newMailConfig(c *config) *email.Config {
 		Login:  c.EmailLogin,
 		Pass:   c.EmailPass,
 	}
+}
+
+func newRandSource(_ *config) io.Reader {
+	return rand.Reader
 }
