@@ -87,7 +87,7 @@ func (app *application) loginUserHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	if !user.Confirmed {
-		app.forbiddenResponse(w, r, "account not confirmed")
+		app.forbiddenResponse(w, r, "user not confirmed")
 		return
 	}
 

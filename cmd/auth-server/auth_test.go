@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	mockemail "github.com/SergeyKozhin/blogin-auth/mocks/email"
+
 	"github.com/SergeyKozhin/blogin-auth/internal/data/models"
 	mockdata "github.com/SergeyKozhin/blogin-auth/mocks/data"
 	mockjwt "github.com/SergeyKozhin/blogin-auth/mocks/jwt"
@@ -17,23 +19,29 @@ import (
 )
 
 const (
-	validCode   = "validCode"
-	invalidCode = "invalidCode"
+	validCode     = "validCode"
+	invalidCode   = "invalidCode"
+	generatedCode = "aaaaa"
 
 	validLogin   = "validLogin"
 	invalidLogin = "invalidLogin"
 
 	validPass   = "validPass"
+	newPass     = "newPass"
 	invalidPass = "invalidPass"
 
 	validEmail         = "valid@email.com"
 	invalidEmail       = "invalid@email.com"
 	validID      int64 = 1
 
-	validAccessToken    = "validAccessToken"
-	invalidAccessToken  = "invalidAccessToken"
-	validRefreshToken   = "aaaaa"
-	invalidRefreshToken = "invalidRefreshToken"
+	validAccessToken      = "validAccessToken"
+	invalidAccessToken    = "invalidAccessToken"
+	validRefreshToken     = "validRefreshToken"
+	invalidRefreshToken   = "invalidRefreshToken"
+	generatedRefreshToken = "aaaaa"
+
+	refreshTokenLength     = 5
+	confirmationCodeLength = 5
 )
 
 var (
@@ -55,10 +63,12 @@ var (
 		Confirmed:    true,
 	}
 
-	notFoundBody            = map[string]string{"error": "the requested resource could not be found"}
-	accountNotConfirmedBody = map[string]string{"error": "account not confirmed"}
-	invalidCredentialsBody  = map[string]string{"error": "invalid credentials"}
-	serverErrorBody         = map[string]string{"error": "the server encountered a problem and could not process your request"}
+	notFoundBody           = map[string]string{"error": "the requested resource could not be found"}
+	userNotConfirmedBody   = map[string]string{"error": "user not confirmed"}
+	invalidCredentialsBody = map[string]string{"error": "invalid credentials"}
+	noSuchSessionBody      = map[string]string{"error": "no such session"}
+	alreadyConfirmedBody   = map[string]string{"error": "user already confirmed"}
+	serverErrorBody        = map[string]string{"error": "the server encountered a problem and could not process your request"}
 
 	someError = errors.New("some error")
 )
@@ -363,14 +373,14 @@ func Test_application_loginUserHandler(t *testing.T) {
 
 	usersMock := mockdata.NewMockUserRepository(ctrl)
 	jwtMock := mockjwt.NewMockManager(ctrl)
-	refershTokensMock := mockdata.NewMockRefreshTokenRepository(ctrl)
+	refreshTokensMock := mockdata.NewMockRefreshTokenRepository(ctrl)
 
 	app := &application{
-		config:        &config{SessionTokenLength: 5},
+		config:        &config{SessionTokenLength: refreshTokenLength},
 		logger:        zap.NewNop().Sugar(),
 		users:         usersMock,
 		jwts:          jwtMock,
-		refreshTokens: refershTokensMock,
+		refreshTokens: refreshTokensMock,
 		randSource:    &constReader{},
 	}
 
@@ -401,13 +411,13 @@ func Test_application_loginUserHandler(t *testing.T) {
 				gomock.InOrder(
 					usersMock.EXPECT().GetByLogin(gomock.Any(), gomock.Eq(validLogin)).Return(confirmedUser, nil),
 					jwtMock.EXPECT().CreateToken(gomock.Eq(validID)).Return(validAccessToken, nil),
-					refershTokensMock.EXPECT().Add(gomock.Any(), gomock.Eq(validRefreshToken), gomock.Eq(validID)).Return(nil),
+					refreshTokensMock.EXPECT().Add(gomock.Any(), gomock.Eq(generatedRefreshToken), gomock.Eq(validID)).Return(nil),
 				)
 			},
 			wantCode: http.StatusOK,
 			wantBody: output{
 				AccessToken:  validAccessToken,
-				RefreshToken: validRefreshToken,
+				RefreshToken: generatedRefreshToken,
 			},
 		},
 		{
@@ -422,7 +432,7 @@ func Test_application_loginUserHandler(t *testing.T) {
 				)
 			},
 			wantCode: http.StatusForbidden,
-			wantBody: accountNotConfirmedBody,
+			wantBody: userNotConfirmedBody,
 		},
 		{
 			name: "valid login and invalid password",
@@ -491,7 +501,7 @@ func Test_application_loginUserHandler(t *testing.T) {
 				gomock.InOrder(
 					usersMock.EXPECT().GetByLogin(gomock.Any(), gomock.Eq(validLogin)).Return(confirmedUser, nil),
 					jwtMock.EXPECT().CreateToken(gomock.Eq(validID)).Return(validAccessToken, nil),
-					refershTokensMock.EXPECT().Add(gomock.Any(), gomock.Eq(validRefreshToken), gomock.Eq(validID)).Return(someError),
+					refreshTokensMock.EXPECT().Add(gomock.Any(), gomock.Eq(generatedRefreshToken), gomock.Eq(validID)).Return(someError),
 				)
 			},
 			wantCode: http.StatusInternalServerError,
@@ -519,218 +529,762 @@ func Test_application_loginUserHandler(t *testing.T) {
 	}
 }
 
-//func Test_application_logoutUserHandler(t *testing.T) {
-//	type fields struct {
-//		config        *config
-//		logger        *zap.SugaredLogger
-//		jwts          *jwt.Manager
-//		refreshTokens data.RefreshTokenRepository
-//		users         data.UserRepository
-//		codes         data.CodesRepository
-//		mail          email.MailSender
-//	}
-//	type args struct {
-//		w http.ResponseWriter
-//		r *http.Request
-//	}
-//	tests := []struct {
-//		name   string
-//		fields fields
-//		args   args
-//	}{
-//		// TODO: Add test cases.
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			app := &application{
-//				config:        tt.fields.config,
-//				logger:        tt.fields.logger,
-//				jwts:          tt.fields.jwts,
-//				refreshTokens: tt.fields.refreshTokens,
-//				users:         tt.fields.users,
-//				codes:         tt.fields.codes,
-//				mail:          tt.fields.mail,
-//			}
-//		})
-//	}
-//}
-//
-//func Test_application_refreshTokenHandler(t *testing.T) {
-//	type fields struct {
-//		config        *config
-//		logger        *zap.SugaredLogger
-//		jwts          *jwt.Manager
-//		refreshTokens data.RefreshTokenRepository
-//		users         data.UserRepository
-//		codes         data.CodesRepository
-//		mail          email.MailSender
-//	}
-//	type args struct {
-//		w http.ResponseWriter
-//		r *http.Request
-//	}
-//	tests := []struct {
-//		name   string
-//		fields fields
-//		args   args
-//	}{
-//		// TODO: Add test cases.
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			app := &application{
-//				config:        tt.fields.config,
-//				logger:        tt.fields.logger,
-//				jwts:          tt.fields.jwts,
-//				refreshTokens: tt.fields.refreshTokens,
-//				users:         tt.fields.users,
-//				codes:         tt.fields.codes,
-//				mail:          tt.fields.mail,
-//			}
-//		})
-//	}
-//}
-//
-//func Test_application_requestConfirmationHandler(t *testing.T) {
-//	type fields struct {
-//		config        *config
-//		logger        *zap.SugaredLogger
-//		jwts          *jwt.Manager
-//		refreshTokens data.RefreshTokenRepository
-//		users         data.UserRepository
-//		codes         data.CodesRepository
-//		mail          email.MailSender
-//	}
-//	type args struct {
-//		w http.ResponseWriter
-//		r *http.Request
-//	}
-//	tests := []struct {
-//		name   string
-//		fields fields
-//		args   args
-//	}{
-//		// TODO: Add test cases.
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			app := &application{
-//				config:        tt.fields.config,
-//				logger:        tt.fields.logger,
-//				jwts:          tt.fields.jwts,
-//				refreshTokens: tt.fields.refreshTokens,
-//				users:         tt.fields.users,
-//				codes:         tt.fields.codes,
-//				mail:          tt.fields.mail,
-//			}
-//		})
-//	}
-//}
-//
-//func Test_application_requestResetHandler(t *testing.T) {
-//	type fields struct {
-//		config        *config
-//		logger        *zap.SugaredLogger
-//		jwts          *jwt.Manager
-//		refreshTokens data.RefreshTokenRepository
-//		users         data.UserRepository
-//		codes         data.CodesRepository
-//		mail          email.MailSender
-//	}
-//	type args struct {
-//		w http.ResponseWriter
-//		r *http.Request
-//	}
-//	tests := []struct {
-//		name   string
-//		fields fields
-//		args   args
-//	}{
-//		// TODO: Add test cases.
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			app := &application{
-//				config:        tt.fields.config,
-//				logger:        tt.fields.logger,
-//				jwts:          tt.fields.jwts,
-//				refreshTokens: tt.fields.refreshTokens,
-//				users:         tt.fields.users,
-//				codes:         tt.fields.codes,
-//				mail:          tt.fields.mail,
-//			}
-//		})
-//	}
-//}
-//
-//func Test_application_resetHandler(t *testing.T) {
-//	type fields struct {
-//		config        *config
-//		logger        *zap.SugaredLogger
-//		jwts          *jwt.Manager
-//		refreshTokens data.RefreshTokenRepository
-//		users         data.UserRepository
-//		codes         data.CodesRepository
-//		mail          email.MailSender
-//	}
-//	type args struct {
-//		w http.ResponseWriter
-//		r *http.Request
-//	}
-//	tests := []struct {
-//		name   string
-//		fields fields
-//		args   args
-//	}{
-//		// TODO: Add test cases.
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			app := &application{
-//				config:        tt.fields.config,
-//				logger:        tt.fields.logger,
-//				jwts:          tt.fields.jwts,
-//				refreshTokens: tt.fields.refreshTokens,
-//				users:         tt.fields.users,
-//				codes:         tt.fields.codes,
-//				mail:          tt.fields.mail,
-//			}
-//		})
-//	}
-//}
-//
-//func Test_application_signupUserHandler(t *testing.T) {
-//	type fields struct {
-//		config        *config
-//		logger        *zap.SugaredLogger
-//		jwts          *jwt.Manager
-//		refreshTokens data.RefreshTokenRepository
-//		users         data.UserRepository
-//		codes         data.CodesRepository
-//		mail          email.MailSender
-//	}
-//	type args struct {
-//		w http.ResponseWriter
-//		r *http.Request
-//	}
-//	tests := []struct {
-//		name   string
-//		fields fields
-//		args   args
-//	}{
-//		// TODO: Add test cases.
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			app := &application{
-//				config:        tt.fields.config,
-//				logger:        tt.fields.logger,
-//				jwts:          tt.fields.jwts,
-//				refreshTokens: tt.fields.refreshTokens,
-//				users:         tt.fields.users,
-//				codes:         tt.fields.codes,
-//				mail:          tt.fields.mail,
-//			}
-//		})
-//	}
-//}
+func Test_application_logoutUserHandler(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	refreshTokensMock := mockdata.NewMockRefreshTokenRepository(ctrl)
+
+	app := &application{
+		logger:        zap.NewNop().Sugar(),
+		refreshTokens: refreshTokensMock,
+	}
+
+	type input struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	tests := []struct {
+		name         string
+		input        input
+		prepareMocks func()
+		wantCode     int
+		emptyBody    bool
+		wantBody     interface{}
+	}{
+		{
+			name:  "valid refresh token",
+			input: input{RefreshToken: validRefreshToken},
+			prepareMocks: func() {
+				refreshTokensMock.EXPECT().Delete(gomock.Any(), gomock.Eq(validRefreshToken)).Return(nil)
+			},
+			wantCode:  http.StatusOK,
+			emptyBody: true,
+		},
+		{
+			name:  "invalid refresh token",
+			input: input{RefreshToken: invalidRefreshToken},
+			prepareMocks: func() {
+				refreshTokensMock.EXPECT().Delete(gomock.Any(), gomock.Eq(invalidRefreshToken)).Return(models.ErrNoRecord)
+			},
+			wantCode: http.StatusUnauthorized,
+			wantBody: noSuchSessionBody,
+		},
+		{
+			name:  "deleting token error",
+			input: input{RefreshToken: validRefreshToken},
+			prepareMocks: func() {
+				refreshTokensMock.EXPECT().Delete(gomock.Any(), gomock.Eq(validRefreshToken)).Return(someError)
+			},
+			wantCode: http.StatusInternalServerError,
+			wantBody: serverErrorBody,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.prepareMocks()
+
+			inputJSON, err := json.Marshal(tt.input)
+			assert.NoError(t, err)
+
+			req := httptest.NewRequest("", "/", bytes.NewBuffer(inputJSON))
+			w := httptest.NewRecorder()
+
+			app.logoutUserHandler(w, req)
+
+			assert.Equal(t, tt.wantCode, w.Code)
+
+			if tt.emptyBody {
+				assert.Empty(t, w.Body.Bytes())
+			} else {
+				outputJSON, err := json.Marshal(tt.wantBody)
+				assert.NoError(t, err)
+				assert.Equal(t, outputJSON, w.Body.Bytes())
+			}
+		})
+	}
+}
+
+func Test_application_refreshTokenHandler(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	jwtMock := mockjwt.NewMockManager(ctrl)
+	refreshTokensMock := mockdata.NewMockRefreshTokenRepository(ctrl)
+
+	app := &application{
+		config:        &config{SessionTokenLength: refreshTokenLength},
+		logger:        zap.NewNop().Sugar(),
+		jwts:          jwtMock,
+		refreshTokens: refreshTokensMock,
+		randSource:    &constReader{},
+	}
+
+	type input struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	type output struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	tests := []struct {
+		name         string
+		input        input
+		prepareMocks func()
+		wantCode     int
+		wantBody     interface{}
+	}{
+		{
+			name:  "valid refresh token",
+			input: input{RefreshToken: validRefreshToken},
+			prepareMocks: func() {
+				gomock.InOrder(
+					refreshTokensMock.EXPECT().Get(gomock.Any(), gomock.Eq(validRefreshToken)).Return(validID, nil),
+					jwtMock.EXPECT().CreateToken(gomock.Eq(validID)).Return(validAccessToken, nil),
+					refreshTokensMock.EXPECT().Refresh(gomock.Any(), gomock.Eq(validRefreshToken), gomock.Eq(generatedRefreshToken)).Return(nil),
+				)
+			},
+			wantCode: http.StatusOK,
+			wantBody: output{
+				AccessToken:  validAccessToken,
+				RefreshToken: generatedRefreshToken,
+			},
+		},
+		{
+			name:  "invalid refresh token",
+			input: input{RefreshToken: invalidRefreshToken},
+			prepareMocks: func() {
+				gomock.InOrder(
+					refreshTokensMock.EXPECT().Get(gomock.Any(), gomock.Eq(invalidRefreshToken)).Return(int64(0), models.ErrNoRecord),
+				)
+			},
+			wantCode: http.StatusUnauthorized,
+			wantBody: noSuchSessionBody,
+		},
+		{
+			name:  "get id from token error",
+			input: input{RefreshToken: validRefreshToken},
+			prepareMocks: func() {
+				gomock.InOrder(
+					refreshTokensMock.EXPECT().Get(gomock.Any(), gomock.Eq(validRefreshToken)).Return(int64(0), someError),
+				)
+			},
+			wantCode: http.StatusInternalServerError,
+			wantBody: serverErrorBody,
+		},
+		{
+			name:  "create access token error",
+			input: input{RefreshToken: validRefreshToken},
+			prepareMocks: func() {
+				gomock.InOrder(
+					refreshTokensMock.EXPECT().Get(gomock.Any(), gomock.Eq(validRefreshToken)).Return(validID, nil),
+					jwtMock.EXPECT().CreateToken(gomock.Eq(validID)).Return("", someError),
+				)
+			},
+			wantCode: http.StatusInternalServerError,
+			wantBody: serverErrorBody,
+		},
+		{
+			name:  "refresh token error",
+			input: input{RefreshToken: validRefreshToken},
+			prepareMocks: func() {
+				gomock.InOrder(
+					refreshTokensMock.EXPECT().Get(gomock.Any(), gomock.Eq(validRefreshToken)).Return(validID, nil),
+					jwtMock.EXPECT().CreateToken(gomock.Eq(validID)).Return(validAccessToken, nil),
+					refreshTokensMock.EXPECT().Refresh(gomock.Any(), gomock.Eq(validRefreshToken), gomock.Eq(generatedRefreshToken)).Return(someError),
+				)
+			},
+			wantCode: http.StatusInternalServerError,
+			wantBody: serverErrorBody,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.prepareMocks()
+
+			inputJSON, err := json.Marshal(tt.input)
+			assert.NoError(t, err)
+
+			req := httptest.NewRequest("", "/", bytes.NewBuffer(inputJSON))
+			w := httptest.NewRecorder()
+
+			app.refreshTokenHandler(w, req)
+
+			assert.Equal(t, tt.wantCode, w.Code)
+
+			outputJSON, err := json.Marshal(tt.wantBody)
+			assert.NoError(t, err)
+			assert.Equal(t, outputJSON, w.Body.Bytes())
+		})
+	}
+}
+
+func Test_application_requestConfirmationHandler(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	usersMock := mockdata.NewMockUserRepository(ctrl)
+	codeMock := mockdata.NewMockCodesRepository(ctrl)
+	emailMock := mockemail.NewMockMailSender(ctrl)
+
+	app := &application{
+		config:     &config{CodeLength: confirmationCodeLength},
+		logger:     zap.NewNop().Sugar(),
+		users:      usersMock,
+		codes:      codeMock,
+		mail:       emailMock,
+		randSource: &constReader{},
+	}
+
+	type input struct {
+		Login string `json:"login"`
+	}
+
+	tests := []struct {
+		name         string
+		input        input
+		prepareMocks func()
+		wantCode     int
+		emptyBody    bool
+		wantBody     interface{}
+	}{
+		{
+			name:  "valid login, unconfirmed user",
+			input: input{Login: validLogin},
+			prepareMocks: func() {
+				gomock.InOrder(
+					usersMock.EXPECT().GetByLogin(gomock.Any(), gomock.Eq(validLogin)).Return(unconfirmedUser, nil),
+					codeMock.EXPECT().Add(gomock.Any(), gomock.Eq(generatedCode), gomock.Eq(validID)).Return(nil),
+					emailMock.EXPECT().SendConfirmationCode(gomock.Eq(validEmail), generatedCode).Return(nil),
+				)
+			},
+			wantCode:  http.StatusOK,
+			emptyBody: true,
+		},
+		{
+			name:  "valid login, confirmed user",
+			input: input{Login: validLogin},
+			prepareMocks: func() {
+				gomock.InOrder(
+					usersMock.EXPECT().GetByLogin(gomock.Any(), gomock.Eq(validLogin)).Return(confirmedUser, nil),
+				)
+			},
+			wantCode: http.StatusForbidden,
+			wantBody: alreadyConfirmedBody,
+		},
+		{
+			name:  "invalid login",
+			input: input{Login: invalidLogin},
+			prepareMocks: func() {
+				gomock.InOrder(
+					usersMock.EXPECT().GetByLogin(gomock.Any(), gomock.Eq(invalidLogin)).Return(nil, models.ErrNoRecord),
+				)
+			},
+			wantCode: http.StatusNotFound,
+			wantBody: notFoundBody,
+		},
+		{
+			name:  "get user by login error",
+			input: input{Login: validLogin},
+			prepareMocks: func() {
+				gomock.InOrder(
+					usersMock.EXPECT().GetByLogin(gomock.Any(), gomock.Eq(validLogin)).Return(nil, someError),
+				)
+			},
+			wantCode: http.StatusInternalServerError,
+			wantBody: serverErrorBody,
+		},
+		{
+			name:  "save code error",
+			input: input{Login: validLogin},
+			prepareMocks: func() {
+				gomock.InOrder(
+					usersMock.EXPECT().GetByLogin(gomock.Any(), gomock.Eq(validLogin)).Return(unconfirmedUser, nil),
+					codeMock.EXPECT().Add(gomock.Any(), gomock.Eq(generatedCode), gomock.Eq(validID)).Return(someError),
+				)
+			},
+			wantCode: http.StatusInternalServerError,
+			wantBody: serverErrorBody,
+		},
+		{
+			name:  "send email error",
+			input: input{Login: validLogin},
+			prepareMocks: func() {
+				gomock.InOrder(
+					usersMock.EXPECT().GetByLogin(gomock.Any(), gomock.Eq(validLogin)).Return(unconfirmedUser, nil),
+					codeMock.EXPECT().Add(gomock.Any(), gomock.Eq(generatedCode), gomock.Eq(validID)).Return(nil),
+					emailMock.EXPECT().SendConfirmationCode(gomock.Eq(validEmail), generatedCode).Return(someError),
+				)
+			},
+			wantCode: http.StatusInternalServerError,
+			wantBody: serverErrorBody,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.prepareMocks()
+
+			inputJSON, err := json.Marshal(tt.input)
+			assert.NoError(t, err)
+
+			req := httptest.NewRequest("", "/", bytes.NewBuffer(inputJSON))
+			w := httptest.NewRecorder()
+
+			app.requestConfirmationHandler(w, req)
+
+			assert.Equal(t, tt.wantCode, w.Code)
+
+			if tt.emptyBody {
+				assert.Empty(t, w.Body.Bytes())
+			} else {
+				outputJSON, err := json.Marshal(tt.wantBody)
+				assert.NoError(t, err)
+				assert.Equal(t, outputJSON, w.Body.Bytes())
+			}
+		})
+	}
+}
+
+func Test_application_requestResetHandler(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	usersMock := mockdata.NewMockUserRepository(ctrl)
+	codeMock := mockdata.NewMockCodesRepository(ctrl)
+	emailMock := mockemail.NewMockMailSender(ctrl)
+
+	app := &application{
+		config:     &config{CodeLength: confirmationCodeLength},
+		logger:     zap.NewNop().Sugar(),
+		users:      usersMock,
+		codes:      codeMock,
+		mail:       emailMock,
+		randSource: &constReader{},
+	}
+
+	type input struct {
+		Email string `json:"email"`
+	}
+
+	tests := []struct {
+		name         string
+		input        input
+		prepareMocks func()
+		wantCode     int
+		emptyBody    bool
+		wantBody     interface{}
+	}{
+		{
+			name:  "valid email, confirmed user",
+			input: input{Email: validEmail},
+			prepareMocks: func() {
+				gomock.InOrder(
+					usersMock.EXPECT().GetByEmail(gomock.Any(), gomock.Eq(validEmail)).Return(confirmedUser, nil),
+					codeMock.EXPECT().Add(gomock.Any(), gomock.Eq(generatedCode), gomock.Eq(validID)).Return(nil),
+					emailMock.EXPECT().SendResetCode(gomock.Eq(validEmail), gomock.Eq(generatedCode)),
+				)
+			},
+			wantCode:  http.StatusOK,
+			emptyBody: true,
+		},
+		{
+			name:  "valid email, unconfirmed user",
+			input: input{Email: validEmail},
+			prepareMocks: func() {
+				gomock.InOrder(
+					usersMock.EXPECT().GetByEmail(gomock.Any(), gomock.Eq(validEmail)).Return(unconfirmedUser, nil),
+				)
+			},
+			wantCode: http.StatusForbidden,
+			wantBody: userNotConfirmedBody,
+		},
+		{
+			name:  "invalid email",
+			input: input{Email: invalidEmail},
+			prepareMocks: func() {
+				gomock.InOrder(
+					usersMock.EXPECT().GetByEmail(gomock.Any(), gomock.Eq(invalidEmail)).Return(nil, models.ErrNoRecord),
+				)
+			},
+			wantCode: http.StatusNotFound,
+			wantBody: notFoundBody,
+		},
+		{
+			name:  "get user by email error",
+			input: input{Email: validEmail},
+			prepareMocks: func() {
+				gomock.InOrder(
+					usersMock.EXPECT().GetByEmail(gomock.Any(), gomock.Eq(validEmail)).Return(nil, someError),
+				)
+			},
+			wantCode: http.StatusInternalServerError,
+			wantBody: serverErrorBody,
+		},
+		{
+			name:  "save code error",
+			input: input{Email: validEmail},
+			prepareMocks: func() {
+				gomock.InOrder(
+					usersMock.EXPECT().GetByEmail(gomock.Any(), gomock.Eq(validEmail)).Return(confirmedUser, nil),
+					codeMock.EXPECT().Add(gomock.Any(), gomock.Eq(generatedCode), gomock.Eq(validID)).Return(someError),
+				)
+			},
+			wantCode: http.StatusInternalServerError,
+			wantBody: serverErrorBody,
+		},
+		{
+			name:  "send email error",
+			input: input{Email: validEmail},
+			prepareMocks: func() {
+				gomock.InOrder(
+					usersMock.EXPECT().GetByEmail(gomock.Any(), gomock.Eq(validEmail)).Return(confirmedUser, nil),
+					codeMock.EXPECT().Add(gomock.Any(), gomock.Eq(generatedCode), gomock.Eq(validID)).Return(nil),
+					emailMock.EXPECT().SendResetCode(gomock.Eq(validEmail), generatedCode).Return(someError),
+				)
+			},
+			wantCode: http.StatusInternalServerError,
+			wantBody: serverErrorBody,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.prepareMocks()
+
+			inputJSON, err := json.Marshal(tt.input)
+			assert.NoError(t, err)
+
+			req := httptest.NewRequest("", "/", bytes.NewBuffer(inputJSON))
+			w := httptest.NewRecorder()
+
+			app.requestResetHandler(w, req)
+
+			assert.Equal(t, tt.wantCode, w.Code)
+
+			if tt.emptyBody {
+				assert.Empty(t, w.Body.Bytes())
+			} else {
+				outputJSON, err := json.Marshal(tt.wantBody)
+				assert.NoError(t, err)
+				assert.Equal(t, outputJSON, w.Body.Bytes())
+			}
+		})
+	}
+}
+
+func Test_application_resetHandler(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	usersMock := mockdata.NewMockUserRepository(ctrl)
+	codeMock := mockdata.NewMockCodesRepository(ctrl)
+
+	app := &application{
+		logger: zap.NewNop().Sugar(),
+		users:  usersMock,
+		codes:  codeMock,
+	}
+
+	type input struct {
+		Email    string `json:"email"`
+		Code     string `json:"code"`
+		Password string `json:"password"`
+	}
+
+	tests := []struct {
+		name         string
+		input        input
+		prepareMocks func()
+		wantCode     int
+		emptyBody    bool
+		wantBody     interface{}
+	}{
+		{
+			name: "valid email, code and password",
+			input: input{
+				Email:    validEmail,
+				Code:     validCode,
+				Password: newPass,
+			},
+			prepareMocks: func() {
+				userCopy := *confirmedUser
+				gomock.InOrder(
+					codeMock.EXPECT().Get(gomock.Any(), gomock.Eq(validCode)).Return(validID, nil),
+					usersMock.EXPECT().GetByID(gomock.Any(), gomock.Eq(validID)).Return(&userCopy, nil),
+					usersMock.EXPECT().Update(gomock.Any(), IsUserWithPassword(confirmedUser, newPass)).Return(nil),
+					codeMock.EXPECT().Delete(gomock.Any(), gomock.Eq(validCode)).Return(nil),
+				)
+			},
+			wantCode:  http.StatusOK,
+			emptyBody: true,
+		},
+		{
+			name: "valid email and code, empty password",
+			input: input{
+				Email:    validEmail,
+				Code:     validCode,
+				Password: "",
+			},
+			prepareMocks: func() {},
+			wantCode:     http.StatusUnprocessableEntity,
+			wantBody: map[string]interface{}{
+				"error": map[string]string{
+					"password": "password must be provided",
+				},
+			},
+		},
+		{
+			name: "invalid code",
+			input: input{
+				Email:    validEmail,
+				Code:     invalidCode,
+				Password: newPass,
+			},
+			prepareMocks: func() {
+				gomock.InOrder(
+					codeMock.EXPECT().Get(gomock.Any(), gomock.Eq(invalidCode)).Return(int64(0), models.ErrNoRecord),
+				)
+			},
+			wantCode: http.StatusNotFound,
+			wantBody: notFoundBody,
+		},
+		{
+			name: "valid code, invalid email",
+			input: input{
+				Email:    invalidEmail,
+				Code:     validCode,
+				Password: newPass,
+			},
+			prepareMocks: func() {
+				userCopy := *confirmedUser
+				gomock.InOrder(
+					codeMock.EXPECT().Get(gomock.Any(), gomock.Eq(validCode)).Return(validID, nil),
+					usersMock.EXPECT().GetByID(gomock.Any(), gomock.Eq(validID)).Return(&userCopy, nil),
+				)
+			},
+			wantCode: http.StatusNotFound,
+			wantBody: notFoundBody,
+		},
+		{
+			name: "get id from code error",
+			input: input{
+				Email:    validEmail,
+				Code:     validCode,
+				Password: newPass,
+			},
+			prepareMocks: func() {
+				gomock.InOrder(
+					codeMock.EXPECT().Get(gomock.Any(), gomock.Eq(validCode)).Return(int64(0), someError),
+				)
+			},
+			wantCode: http.StatusInternalServerError,
+			wantBody: serverErrorBody,
+		},
+		{
+			name: "get user by id error",
+			input: input{
+				Email:    validEmail,
+				Code:     validCode,
+				Password: newPass,
+			},
+			prepareMocks: func() {
+				gomock.InOrder(
+					codeMock.EXPECT().Get(gomock.Any(), gomock.Eq(validCode)).Return(validID, nil),
+					usersMock.EXPECT().GetByID(gomock.Any(), gomock.Eq(validID)).Return(nil, someError),
+				)
+			},
+			wantCode: http.StatusInternalServerError,
+			wantBody: serverErrorBody,
+		},
+		{
+			name: "update user error",
+			input: input{
+				Email:    validEmail,
+				Code:     validCode,
+				Password: newPass,
+			},
+			prepareMocks: func() {
+				userCopy := *confirmedUser
+				gomock.InOrder(
+					codeMock.EXPECT().Get(gomock.Any(), gomock.Eq(validCode)).Return(validID, nil),
+					usersMock.EXPECT().GetByID(gomock.Any(), gomock.Eq(validID)).Return(&userCopy, nil),
+					usersMock.EXPECT().Update(gomock.Any(), IsUserWithPassword(confirmedUser, newPass)).Return(someError),
+				)
+			},
+			wantCode: http.StatusInternalServerError,
+			wantBody: serverErrorBody,
+		},
+		{
+			name: "delete code error",
+			input: input{
+				Email:    validEmail,
+				Code:     validCode,
+				Password: newPass,
+			},
+			prepareMocks: func() {
+				userCopy := *confirmedUser
+				gomock.InOrder(
+					codeMock.EXPECT().Get(gomock.Any(), gomock.Eq(validCode)).Return(validID, nil),
+					usersMock.EXPECT().GetByID(gomock.Any(), gomock.Eq(validID)).Return(&userCopy, nil),
+					usersMock.EXPECT().Update(gomock.Any(), IsUserWithPassword(confirmedUser, newPass)).Return(nil),
+					codeMock.EXPECT().Delete(gomock.Any(), gomock.Eq(validCode)).Return(someError),
+				)
+			},
+			wantCode: http.StatusInternalServerError,
+			wantBody: serverErrorBody,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.prepareMocks()
+
+			inputJSON, err := json.Marshal(tt.input)
+			assert.NoError(t, err)
+
+			req := httptest.NewRequest("", "/", bytes.NewBuffer(inputJSON))
+			w := httptest.NewRecorder()
+
+			app.resetHandler(w, req)
+
+			assert.Equal(t, tt.wantCode, w.Code)
+
+			if tt.emptyBody {
+				assert.Empty(t, w.Body.Bytes())
+			} else {
+				outputJSON, err := json.Marshal(tt.wantBody)
+				assert.NoError(t, err)
+				assert.Equal(t, outputJSON, w.Body.Bytes())
+			}
+		})
+	}
+}
+
+func Test_application_signupUserHandler(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	usersMock := mockdata.NewMockUserRepository(ctrl)
+
+	app := &application{
+		logger: zap.NewNop().Sugar(),
+		users:  usersMock,
+	}
+
+	type input struct {
+		FullName string `json:"full_name"`
+		Login    string `json:"login"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	tests := []struct {
+		name         string
+		input        input
+		prepareMocks func()
+		wantCode     int
+		emptyBody    bool
+		wantBody     interface{}
+	}{
+		{
+			name: "valid input",
+			input: input{
+				FullName: confirmedUser.FullName,
+				Login:    validLogin,
+				Email:    validEmail,
+				Password: validPass,
+			},
+			prepareMocks: func() {
+				userCopy := *unconfirmedUser
+				userCopy.ID = 0
+				usersMock.EXPECT().Add(gomock.Any(), IsUserWithPassword(&userCopy, validPass)).Return(nil)
+			},
+			wantCode:  http.StatusCreated,
+			emptyBody: true,
+		},
+		{
+			name: "errors in input",
+			input: input{
+				FullName: "",
+				Login:    "",
+				Email:    "notEmail",
+				Password: "",
+			},
+			prepareMocks: func() {},
+			wantCode:     http.StatusUnprocessableEntity,
+			wantBody: map[string]interface{}{
+				"error": map[string]string{
+					"full_name": "full name name must be provided",
+					"login":     "login name must be provided",
+					"email":     "valid email must be provided",
+					"password":  "password must be provided",
+				},
+			},
+		},
+		{
+			name: "email already in use",
+			input: input{
+				FullName: confirmedUser.FullName,
+				Login:    validLogin,
+				Email:    validEmail,
+				Password: validPass,
+			},
+			prepareMocks: func() {
+				userCopy := *unconfirmedUser
+				userCopy.ID = 0
+				usersMock.EXPECT().Add(gomock.Any(), IsUserWithPassword(&userCopy, validPass)).Return(&models.ErrUserAlreadyExists{Column: "email"})
+			},
+			wantCode: http.StatusConflict,
+			wantBody: map[string]string{"error": "email is already in use"},
+		},
+		{
+			name: "email already in use",
+			input: input{
+				FullName: confirmedUser.FullName,
+				Login:    validLogin,
+				Email:    validEmail,
+				Password: validPass,
+			},
+			prepareMocks: func() {
+				userCopy := *unconfirmedUser
+				userCopy.ID = 0
+				usersMock.EXPECT().Add(gomock.Any(), IsUserWithPassword(&userCopy, validPass)).Return(&models.ErrUserAlreadyExists{Column: "login"})
+			},
+			wantCode: http.StatusConflict,
+			wantBody: map[string]string{"error": "login is already in use"},
+		},
+		{
+			name: "saving user error",
+			input: input{
+				FullName: confirmedUser.FullName,
+				Login:    validLogin,
+				Email:    validEmail,
+				Password: validPass,
+			},
+			prepareMocks: func() {
+				userCopy := *unconfirmedUser
+				userCopy.ID = 0
+				usersMock.EXPECT().Add(gomock.Any(), IsUserWithPassword(&userCopy, validPass)).Return(someError)
+			},
+			wantCode: http.StatusInternalServerError,
+			wantBody: serverErrorBody,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.prepareMocks()
+
+			inputJSON, err := json.Marshal(tt.input)
+			assert.NoError(t, err)
+
+			req := httptest.NewRequest("", "/", bytes.NewBuffer(inputJSON))
+			w := httptest.NewRecorder()
+
+			app.signupUserHandler(w, req)
+
+			assert.Equal(t, tt.wantCode, w.Code)
+
+			if tt.emptyBody {
+				assert.Empty(t, w.Body.Bytes())
+			} else {
+				outputJSON, err := json.Marshal(tt.wantBody)
+				assert.NoError(t, err)
+				assert.Equal(t, outputJSON, w.Body.Bytes())
+			}
+		})
+	}
+}
