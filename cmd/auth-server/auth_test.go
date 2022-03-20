@@ -8,10 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	mockemail "github.com/SergeyKozhin/blogin-auth/mocks/email"
-
 	"github.com/SergeyKozhin/blogin-auth/internal/data/models"
 	mockdata "github.com/SergeyKozhin/blogin-auth/mocks/data"
+	mockemail "github.com/SergeyKozhin/blogin-auth/mocks/email"
 	mockjwt "github.com/SergeyKozhin/blogin-auth/mocks/jwt"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
