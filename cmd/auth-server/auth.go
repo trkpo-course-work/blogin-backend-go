@@ -216,22 +216,31 @@ func (app *application) requestConfirmationHandler(w http.ResponseWriter, r *htt
 	}
 
 	code := ""
-	for {
-		code, err = app.generateRandomString(app.config.CodeLength)
-		if err != nil {
-			app.serverErrorResponse(w, r, err)
-			return
-		}
+	if strings.HasSuffix(user.Email, app.config.TestAccountSuffix) {
+		code = app.config.TestAccountCode
 
 		if err := app.codes.Add(r.Context(), code, user.ID); err != nil {
-			if errors.Is(err, models.ErrAlreadyExists) {
-				continue
-			}
 			app.serverErrorResponse(w, r, err)
 			return
 		}
+	} else {
+		for {
+			code, err = app.generateRandomString(app.config.CodeLength)
+			if err != nil {
+				app.serverErrorResponse(w, r, err)
+				return
+			}
 
-		break
+			if err := app.codes.Add(r.Context(), code, user.ID); err != nil {
+				if errors.Is(err, models.ErrAlreadyExists) {
+					continue
+				}
+				app.serverErrorResponse(w, r, err)
+				return
+			}
+
+			break
+		}
 	}
 
 	if err := app.mail.SendConfirmationCode(user.Email, code); err != nil {

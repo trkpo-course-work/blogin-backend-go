@@ -23,6 +23,8 @@ type config struct {
 	EmailPort            string        `env:"EMAIL_PORT" envDefault:"587"`
 	EmailLogin           string        `env:"EMAIL_LOGIN" envDefault:"blogin.app.noreply@gmail.com"`
 	EmailPass            string        `env:"EMAIL_PASS,required"`
+	TestAccountSuffix    string        `env:"TEST_ACCOUNT" envDefault:"@test.com"`
+	TestAccountCode      string        `env:"TEST_ACCOUNT_CODE" envDefault:"TEST1"`
 }
 
 func getConfig() (*config, error) {
