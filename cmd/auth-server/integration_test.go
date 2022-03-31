@@ -45,6 +45,7 @@ func TestSignUpAndLogin(t *testing.T) {
 		config: &config{
 			CodeLength:         confirmationCodeLength,
 			SessionTokenLength: refreshTokenLength,
+			TestAccountSuffix:  "@test.com",
 		},
 		logger:        zap.NewNop().Sugar(),
 		users:         usersMock,
@@ -136,6 +137,7 @@ func TestSignUpAndIncorrectLogin(t *testing.T) {
 		config: &config{
 			CodeLength:         confirmationCodeLength,
 			SessionTokenLength: refreshTokenLength,
+			TestAccountSuffix:  "@test.com",
 		},
 		logger:     zap.NewNop().Sugar(),
 		users:      usersMock,
@@ -228,6 +230,7 @@ func TestSignUpAndInvalidConfirmCode(t *testing.T) {
 		config: &config{
 			CodeLength:         confirmationCodeLength,
 			SessionTokenLength: refreshTokenLength,
+			TestAccountSuffix:  "@test.com",
 		},
 		logger:        zap.NewNop().Sugar(),
 		users:         usersMock,

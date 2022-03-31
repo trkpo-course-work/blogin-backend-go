@@ -726,7 +726,7 @@ func Test_application_requestConfirmationHandler(t *testing.T) {
 	emailMock := mockemail.NewMockMailSender(ctrl)
 
 	app := &application{
-		config:     &config{CodeLength: confirmationCodeLength},
+		config:     &config{CodeLength: confirmationCodeLength, TestAccountSuffix: "@test.com"},
 		logger:     zap.NewNop().Sugar(),
 		users:      usersMock,
 		codes:      codeMock,
