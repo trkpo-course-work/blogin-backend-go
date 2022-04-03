@@ -93,6 +93,7 @@ func TestResetAndLogin(t *testing.T) {
 		config: &config{
 			CodeLength:         confirmationCodeLength,
 			SessionTokenLength: refreshTokenLength,
+			TestAccountSuffix:  "@test.com",
 		},
 		logger:        zap.NewNop().Sugar(),
 		users:         usersMock,
