@@ -101,7 +101,7 @@ func (ur *UserRepository) GetByEmail(ctx context.Context, email string) (*models
 
 	user := &models.User{}
 	stmt := "SELECT u.id, name, login, email, password_hash, confirmed FROM users u JOIN credentials c on u.id = c.user_id WHERE c.email = $1"
-	if err := pgxscan.Get(ctx, conn, user, stmt, email); err != nil {
+	if err := pgxscan.Get(ctx, conn, user, stmt, strings.ToLower(email)); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, models.ErrNoRecord
 		}
